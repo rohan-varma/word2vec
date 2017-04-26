@@ -6,6 +6,12 @@ from nltk.corpus import stopwords
 from bs4 import BeautifulSoup
 import re
 from collections import defaultdict
+from sklearn.svm import LinearSVC
+from sklearn.model_selection import train_test_split
+import sys
+sys.path.append('../')
+from utils import *
+
 def clean(review, remove_freq = True):
     """Given a review, cleans it by removing html tags and punctation.
     Also filters out very common words if the remove_freq flag is given.
@@ -59,14 +65,17 @@ def create_feature_vectors(cleaned_reviews, vocab):
     return np.array(feature_vectors)
 
 if __name__ == '__main__':
-    test_data = pd.read_csv('../data/unlabeledTrainData.tsv', header = 0,
-                                delimiter = '\t', quoting = 3)
     train_data = pd.read_csv('../data/labeledTrainData.tsv', header = 0,
                                delimiter = '\t', quoting = 3)
-    print("opened data")
-    cleaned_reviews = [clean(test_data["review"][i]) for i in range(len(test_data["review"]))]
-    print("created cleaned reviews")
-    vocab = create_vocab(cleaned_reviews)
-    print("created vocab")
-    X = create_feature_vectors(cleaned_reviews, vocab)
+    test_data = pd.read_csv('../data/unlabeledTrainData.tsv', header = 0,
+                                delimiter = '\t', quoting = 3)
+
+    train_cleaned_reviews = [clean(train_data["review"][i]) for i in range(len(train_data["review"]))]
+    test_cleaned_reviews = [clean(test_data["review"][i]) for i in range(len(test_data["review"]))]
+
+    y = train_data['sentiment']
+
+    vocab = create_vocab(train_cleaned_reviews)
+    X = create_feature_vectors(train_cleaned_reviews, vocab)
     print(X.shape)
+    print(y.shape)
