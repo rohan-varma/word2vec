@@ -4,13 +4,14 @@ import matplotlib.pyplot as plt
 import nltk
 from nltk.corpus import stopwords
 from bs4 import BeautifulSoup
-
-def clean(review, remove_freq):
+import re
+from collections import defaultdict
+def clean(review, remove_freq = True):
     """Given a review, cleans it by removing html tags and punctation.
     Also filters out very common words if the remove_freq flag is given.
     Params:
     review - a single review from the dataset
-    remove_freq: True if we remove frequent words
+    remove_freq: True if we remove frequent words (enabled by default)
     """
     # remove html
     text = BeautifulSoup(review).get_text()
