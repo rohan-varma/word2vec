@@ -70,7 +70,8 @@ if __name__ == '__main__':
     test_data = pd.read_csv('../data/unlabeledTrainData.tsv', header = 0,
                                 delimiter = '\t', quoting = 3)
 
-    train_cleaned_reviews = [clean(train_data["review"][i]) for i in range(len(train_data["review"]))]
+    train_cleaned_reviews = [clean(train_data["review"][i])
+                             for i in range(len(train_data["review"]))]
     test_cleaned_reviews = [clean(test_data["review"][i]) for i in range(len(test_data["review"]))]
 
     y = train_data['sentiment']
