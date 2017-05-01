@@ -129,6 +129,62 @@ def generate_batch(batch_size, num_skips, skip_window):
   data_index = (data_index + len(data) - span) % len(data)
   return batch, labels
 
+def run_model():
+    train_inputs = tf.placeholder(tf.int32, shape=[batch_size])
+    train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
+    valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
+
+    # creates a vocab_size * embedding_size matrix. For the ith word in the vocab,
+    # the vector embeddings[i] is the corresponding embedding.
+    embeddings = tf.Variable(tf.random_uniform([vocabulary_size,
+                                                embedding_size], -1.0, 1.0))
+    # treats the embedding matrix as a lookup table so we can get the embeddings
+    embed = tf.nn.embedding_lookup(embeddings, train_inputs)
+    # "Xavier" init
+    nce_weights = tf.Variable(tf.truncated_normal(
+        [vocabulary_size, embedding_size],
+        stddev=1.0/math.sqrt(embedding_size)))
+    nce_biases = tf.Variable(tf.zeros([vocabulary_size]))
+
+    # Compute the average NCE loss for the batch.
+    # tf.nce_loss automatically draws a new sample of the negative labels each
+    # time we evaluate the loss.
+    loss = tf.reduce_mean(
+        tf.nn.nce_loss(weights=nce_weights,
+                       biases=nce_biases,
+                       labels=train_labels,
+                       inputs=embed,
+                       num_sampled=num_sampled,
+                       num_classes=vocabulary_size))
+
+    # Construct the SGD optimizer using a learning rate of 1.0.
+    optimizer = tf.train.GradientDescentOptimizer(1.0).minimize(loss)
+
+    # Compute the cosine similarity between minibatch examples and all embeddings.
+    norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
+    normalized_embeddings = embeddings / norm
+    valid_embeddings = tf.nn.embedding_lookup(
+        normalized_embeddings, valid_dataset)
+    similarity = tf.matmul(
+        valid_embeddings, normalized_embeddings, transpose_b=True)
+
+    init = tf.global_variables_initializer()
+    nsteps = 100001
+    with tf.Session() as sess:
+        sess.run(init)
+        avg_loss = 0.
+        for step in range(nsteps):
+            batch_inputs, batch_labels = generate_batch(batch_size,
+                                                        num_skips, skip_window)
+            feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
+            _, loss = sess.run([optimizer, loss], feed_dict = feed_dict)
+            avg_loss+=loss
+            if step % 2000 == 0:
+                if step != 0: avg_loss /= 2000
+                print("Average loss at epoch {}: {}".format(step, avg_loss))
+                avg_loss = 0.
+        final_embeddings = normalized_embeddings.eval()
+
 def create_model():
     embeddings = tf.Variable(tf.random_uniform([vocabulary_size,
                                                 embedding_size], -1.0, 1.0))
