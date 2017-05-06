@@ -10,6 +10,8 @@ import re
 import collections
 from nltk.corpus import stopwords
 import random
+import pickle
+import argparse
 
 def clean(review, remove_freq = True):
     """Given a review, cleans it by removing html tags and punctation.
@@ -129,7 +131,37 @@ def generate_batch(batch_size, num_skips, skip_window):
   data_index = (data_index + len(data) - span) % len(data)
   return batch, labels
 
-def run_model():
+
+
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--load", help="load data structures from a file",
+                        action = "store_true")
+    args = parser.parse_args()
+    if args.load:
+        print("loading data from file data.pik")
+        with open('data.pik', 'rb') as f:
+            clean_reviews, y, data, count, dictionary, reverse_dictionary = pickle.load(f)
+    else:
+        clean_reviews, y = extract_and_clean_data('../data/labeledTrainData.tsv')
+        vocab = build_vocab(clean_reviews, keep_dups = True)
+        words, vocabulary_size = vocab, len(vocab)
+        data, count, dictionary, reverse_dictionary = build_dataset(words, vocabulary_size)
+        del words
+        with open('data.pik', 'wb') as f:
+            pickle.dump([clean_reviews, y, data, count, dictionary,
+                         reverse_dictionary], f, -1)
+
+
+    print('Most common words (+UNK)', count[:5])
+    print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
+    data_index = 0
+    batch, labels = generate_batch(batch_size=8, num_skips=2, skip_window=1)
+    print(batch.shape)
+    print(labels.shape)
+    exit()
     train_inputs = tf.placeholder(tf.int32, shape=[batch_size])
     train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
     valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
@@ -184,27 +216,3 @@ def run_model():
                 print("Average loss at epoch {}: {}".format(step, avg_loss))
                 avg_loss = 0.
         final_embeddings = normalized_embeddings.eval()
-
-def create_model():
-    embeddings = tf.Variable(tf.random_uniform([vocabulary_size,
-                                                embedding_size], -1.0, 1.0))
-    # "Xavier" init
-    nce_weights = tf.Variable(tf.truncated_normal([vocabulary_size, embedding_size], stddev=1.0/math.sqrt(embedding_size)))
-    nce_biases = tf.Variable(tf.zeros([vocabulary_size]))
-    train_inputs = tf.placeholder(tf.float32, shape = [None, vocab_size])
-    train_labels = tf.placeholder(tf.float32, shape = [None, 1])
-
-
-
-if __name__ == '__main__':
-    clean_reviews, y = extract_and_clean_data('../data/labeledTrainData.tsv')
-    vocab = build_vocab(clean_reviews, keep_dups = True)
-    words, vocabulary_size = vocab, len(vocab)
-    data, count, dictionary, reverse_dictionary = build_dataset(words, vocabulary_size)
-    del words  # Hint to the OS to reduce memory.
-    print('Most common words (+UNK)', count[:5])
-    print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
-    data_index = 0
-    batch, labels = generate_batch(batch_size=8, num_skips=2, skip_window=1)
-    print(batch.shape)
-    print(labels.shape)
