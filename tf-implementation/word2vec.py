@@ -12,6 +12,7 @@ from nltk.corpus import stopwords
 import random
 import pickle
 import argparse
+import math
 
 def clean(review, remove_freq = True):
     """Given a review, cleans it by removing html tags and punctation.
@@ -158,26 +159,30 @@ if __name__ == '__main__':
     print('Most common words (+UNK)', count[:5])
     print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
     data_index = 0
-    batch, labels = generate_batch(batch_size=8, num_skips=2, skip_window=1)
+    batch_size = 8
+    batch, labels = generate_batch(batch_size=batch_size, num_skips=2, skip_window=1)
     print(batch.shape)
     print(labels.shape)
-    exit()
     train_inputs = tf.placeholder(tf.int32, shape=[batch_size])
     train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
+    valid_window = 100  # Only pick dev samples in the head of the distribution.
+    valid_size = 16
+    vocabulary_size = count
+    embedding_size = 128
+    valid_examples = np.random.choice(valid_window, valid_size, replace=False)
     valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
-
-    # creates a vocab_size * embedding_size matrix. For the ith word in the vocab,
+        # creates a vocab_size * embedding_size matrix. For the ith word in the vocab,
     # the vector embeddings[i] is the corresponding embedding.
-    embeddings = tf.Variable(tf.random_uniform([vocabulary_size,
-                                                embedding_size], -1.0, 1.0))
+    embeddings = tf.Variable(
+        tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
+
     # treats the embedding matrix as a lookup table so we can get the embeddings
-    embed = tf.nn.embedding_lookup(embeddings, train_inputs)
+
     # "Xavier" init
     nce_weights = tf.Variable(tf.truncated_normal(
         [vocabulary_size, embedding_size],
         stddev=1.0/math.sqrt(embedding_size)))
     nce_biases = tf.Variable(tf.zeros([vocabulary_size]))
-
     # Compute the average NCE loss for the batch.
     # tf.nce_loss automatically draws a new sample of the negative labels each
     # time we evaluate the loss.
@@ -202,6 +207,7 @@ if __name__ == '__main__':
 
     init = tf.global_variables_initializer()
     nsteps = 100001
+    exit()
     with tf.Session() as sess:
         sess.run(init)
         avg_loss = 0.
