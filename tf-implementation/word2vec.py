@@ -144,7 +144,7 @@ if __name__ == '__main__':
     if args.load:
         print("loading data from file data.pik")
         with open('data.pik', 'rb') as f:
-            clean_reviews, y, data, count, dictionary, reverse_dictionary = pickle.load(f)
+            clean_reviews, y, data, count, dictionary, reverse_dictionary, vocabulary_size = pickle.load(f)
     else:
         clean_reviews, y = extract_and_clean_data('../data/labeledTrainData.tsv')
         vocab = build_vocab(clean_reviews, keep_dups = True)
@@ -153,7 +153,7 @@ if __name__ == '__main__':
         del words
         with open('data.pik', 'wb') as f:
             pickle.dump([clean_reviews, y, data, count, dictionary,
-                         reverse_dictionary], f, -1)
+                         reverse_dictionary, vocabulary_size], f, -1)
 
 
     print('Most common words (+UNK)', count[:5])
@@ -167,14 +167,16 @@ if __name__ == '__main__':
     train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
     valid_window = 100  # Only pick dev samples in the head of the distribution.
     valid_size = 16
-    vocabulary_size = count
     embedding_size = 128
     valid_examples = np.random.choice(valid_window, valid_size, replace=False)
     valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
         # creates a vocab_size * embedding_size matrix. For the ith word in the vocab,
     # the vector embeddings[i] is the corresponding embedding.
+    print(vocabulary_size)
+    print(embedding_size)
     embeddings = tf.Variable(
         tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
+    embed = tf.nn.embedding_lookup(embeddings, train_inputs)
 
     # treats the embedding matrix as a lookup table so we can get the embeddings
 
@@ -183,6 +185,7 @@ if __name__ == '__main__':
         [vocabulary_size, embedding_size],
         stddev=1.0/math.sqrt(embedding_size)))
     nce_biases = tf.Variable(tf.zeros([vocabulary_size]))
+    num_sampled = 64
     # Compute the average NCE loss for the batch.
     # tf.nce_loss automatically draws a new sample of the negative labels each
     # time we evaluate the loss.
