@@ -189,7 +189,7 @@ if __name__ == '__main__':
     # Compute the average NCE loss for the batch.
     # tf.nce_loss automatically draws a new sample of the negative labels each
     # time we evaluate the loss.
-    loss = tf.reduce_mean(
+    loss_fun = tf.reduce_mean(
         tf.nn.nce_loss(weights=nce_weights,
                        biases=nce_biases,
                        labels=train_labels,
@@ -198,7 +198,7 @@ if __name__ == '__main__':
                        num_classes=vocabulary_size))
 
     # Construct the SGD optimizer using a learning rate of 1.0.
-    optimizer = tf.train.GradientDescentOptimizer(1.0).minimize(loss)
+    optimizer = tf.train.GradientDescentOptimizer(1.0).minimize(loss_fun)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -209,18 +209,20 @@ if __name__ == '__main__':
         valid_embeddings, normalized_embeddings, transpose_b=True)
 
     init = tf.global_variables_initializer()
+    skip_window = 1       # How many words to consider left and right.
+    num_skips = 2         # How many times to reuse an input to generate a label.
     nsteps = 100001
-    exit()
+    # exit()
     with tf.Session() as sess:
         sess.run(init)
         avg_loss = 0.
         for step in range(nsteps):
             batch_inputs, batch_labels = generate_batch(batch_size,
-                                                        num_skips, skip_window)
+                                                        num_skips, skip_window) # 2 = num skips, 1 = skip window
             feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
-            _, loss = sess.run([optimizer, loss], feed_dict = feed_dict)
+            _, loss = sess.run([optimizer, loss_fun], feed_dict = feed_dict)
             avg_loss+=loss
-            if step % 2000 == 0:
+            if step % 100 == 0:
                 if step != 0: avg_loss /= 2000
                 print("Average loss at epoch {}: {}".format(step, avg_loss))
                 avg_loss = 0.
