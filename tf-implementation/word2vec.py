@@ -87,6 +87,7 @@ def create_training_examples_one_hot(review, vocab, window_size = 1):
     return data, labels
 
 def build_dataset(words, vocabulary_size):
+    # create a counter for the msot common words
   count = [['UNK', -1]]
   count.extend(collections.Counter(words).most_common(vocabulary_size - 1))
   dictionary = dict()
@@ -94,6 +95,7 @@ def build_dataset(words, vocabulary_size):
     dictionary[word] = len(dictionary)
   data = list()
   unk_count = 0
+  # get word indices
   for word in words:
     if word in dictionary:
       index = dictionary[word]
@@ -102,6 +104,7 @@ def build_dataset(words, vocabulary_size):
       unk_count += 1
     data.append(index)
   count[0][1] = unk_count
+
   reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
   return data, count, dictionary, reverse_dictionary
 
@@ -132,6 +135,23 @@ def generate_batch(batch_size, num_skips, skip_window):
   data_index = (data_index + len(data) - span) % len(data)
   return batch, labels
 
+    # Visualize
+def plot_with_labels(low_dim_embs, labels, filename='tsne.png'):
+    assert low_dim_embs.shape[0] >= len(labels), "More labels than embeddings"
+    plt.figure(figsize=(18, 18))  # in inches
+    for i, label in enumerate(labels):
+        x, y = low_dim_embs[i, :]
+        plt.scatter(x, y)
+        plt.annotate(label,
+                    xy=(x, y),
+                    xytext=(5, 2),
+                    textcoords='offset points',
+                    ha='right',
+                    va='bottom')
+
+    plt.savefig(filename)
+    return 1
+     # plt.show()
 
 
 
@@ -147,7 +167,7 @@ if __name__ == '__main__':
             clean_reviews, y, data, count, dictionary, reverse_dictionary, vocabulary_size = pickle.load(f)
     else:
         clean_reviews, y = extract_and_clean_data('../data/labeledTrainData.tsv')
-        vocab = build_vocab(clean_reviews, keep_dups = True)
+        vocab = build_vocab(clean_reviews, keep_dups = False)
         words, vocabulary_size = vocab, len(vocab)
         data, count, dictionary, reverse_dictionary = build_dataset(words, vocabulary_size)
         del words
@@ -155,7 +175,7 @@ if __name__ == '__main__':
             pickle.dump([clean_reviews, y, data, count, dictionary,
                          reverse_dictionary, vocabulary_size], f, -1)
 
-
+    print("cleaned reviews len: {}".format(len(clean_reviews)))
     print('Most common words (+UNK)', count[:5])
     print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
     data_index = 0
@@ -167,7 +187,7 @@ if __name__ == '__main__':
     train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
     valid_window = 100  # Only pick dev samples in the head of the distribution.
     valid_size = 16
-    embedding_size = 300
+    embedding_size = 128
     valid_examples = np.random.choice(valid_window, valid_size, replace=False)
     valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
         # creates a vocab_size * embedding_size matrix. For the ith word in the vocab,
@@ -222,39 +242,23 @@ if __name__ == '__main__':
             feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
             _, loss = sess.run([optimizer, loss_fun], feed_dict = feed_dict)
             avg_loss+=loss
-            if step % 1000 == 0:
-                if step != 0: avg_loss /= 2000
+            if step % 10000 == 0:
+                if step != 0: avg_loss /= 10000
                 print("Average loss at epoch {}: {}".format(step, avg_loss))
                 avg_loss = 0.
         final_embeddings = normalized_embeddings.eval()
-
-
-    # Visualize
-    def plot_with_labels(low_dim_embs, labels, filename='tsne.png'):
-      assert low_dim_embs.shape[0] >= len(labels), "More labels than embeddings"
-      plt.figure(figsize=(18, 18))  # in inches
-      for i, label in enumerate(labels):
-        x, y = low_dim_embs[i, :]
-        plt.scatter(x, y)
-        plt.annotate(label,
-                     xy=(x, y),
-                     xytext=(5, 2),
-                     textcoords='offset points',
-                     ha='right',
-                     va='bottom')
-
-      plt.savefig(filename)
-     # plt.show()
-
     try:
-      from sklearn.manifold import TSNE
-      import matplotlib.pyplot as plt
-
-      tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=5000)
-      plot_only = 50
-      low_dim_embs = tsne.fit_transform(final_embeddings[:plot_only, :])
-      labels = [reverse_dictionary[i] for i in range(plot_only)]
-      plot_with_labels(low_dim_embs, labels)
-
+         from sklearn.manifold import TSNE
+         import matplotlib.pyplot as plt
+         tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=5000)
+         plot_only = 500
+         low_dim_embs = tsne.fit_transform(final_embeddings[:plot_only, :])
+         labels = [reverse_dictionary[i] for i in range(plot_only)]
+         plot_with_labels(low_dim_embs, labels)
     except ImportError:
-      print("Please install sklearn, matplotlib, and scipy to visualize embeddings.")
+        print("please install sklearn, matplotlib, and scipy for tsne embeddings")
+    print(final_embeddings.shape)
+    print(len(reverse_dictionary.values()))
+    with open('embeddings.txt', 'wb') as f:
+        print("dumping embeddings")
+        pickle.dump([final_embeddings, reverse_dictionary], f, -1)

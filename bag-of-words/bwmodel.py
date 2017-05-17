@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import re
 from collections import defaultdict
 from sklearn.svm import LinearSVC
+from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 import sys
 from sklearn.metrics import accuracy_score
@@ -81,7 +82,7 @@ if __name__ == '__main__':
     if args.load:
         print("loading data")
         with open('data.txt', 'rb') as f:
-            train_cleaned_reviews, test_cleaned_reviews, vocab, y = pickle.load(f)
+            X, train_cleaned_reviews, test_cleaned_reviews, vocab, y = pickle.load(f)
             print("done loading")
     else:
         train_data = pd.read_csv('../data/labeledTrainData.tsv', header = 0, delimiter = '\t', quoting = 3)
@@ -92,15 +93,16 @@ if __name__ == '__main__':
         print("done cleaning data")
         y = train_data['sentiment']
         vocab = create_vocab(train_cleaned_reviews)
+        print("creating feature vctors")
+
         with open('data.txt', 'wb') as f:
             print("dumping data")
             pickle.dump([train_cleaned_reviews, test_cleaned_reviews, vocab, y], f, -1)
 
-    print("creating feature vectors")
-    X = create_feature_vectors(train_cleaned_reviews, vocab)
+    X = create_feature_vectors(train_cleaned_reviews, vocab) #EXPENSIVE, remember to pickle this as well. 
     print("done creating feature vectors, running classification now")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.33)
-    clf = LinearSVC(C=0.5, verbose=10)
+    clf = SVC(C = 10.0, kernel = 'rbf', degree = 3)
     clf.fit(X_train, y_train)
     preds = clf.predict(X_test)
     test_acc = accuracy_score(y_true=y_test, y_pred=preds)
