@@ -11,6 +11,8 @@ from sklearn.model_selection import train_test_split
 import sys
 from sklearn.metrics import accuracy_score
 sys.path.append('../')
+import argparse
+import pickle
 from utils import *
 
 def clean(review, remove_freq = True):
@@ -53,6 +55,10 @@ def get_word_occ_dict(review):
 
 def create_feature_vector(review, vocab):
     """Given a (cleaned) review and a vocabulary, creates a vector of features for that review
+    Takes the review and generates a dictionary of word occurences. Then the vector returned has
+    sizeof(vocab) dimensions with the ith feature indicating the amount of times word i in the vocab
+    occured in the feature.
+    Therefore, this feature vector will be a sparse representation
     Params:
     review: a cleaned review from the dataset
     vocab: the vocabulary list created with creat_vocab()
@@ -67,19 +73,32 @@ def create_feature_vectors(cleaned_reviews, vocab):
     return np.array(feature_vectors)
 
 if __name__ == '__main__':
-    train_data = pd.read_csv('../data/labeledTrainData.tsv', header = 0,
-                               delimiter = '\t', quoting = 3)
-    test_data = pd.read_csv('../data/unlabeledTrainData.tsv', header = 0,
-                                delimiter = '\t', quoting = 3)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--load", help="load data from data.txt",
+                        action = "store_true")
+    args = parser.parse_args()
 
-    train_cleaned_reviews = [clean(train_data["review"][i])
-                             for i in range(len(train_data["review"]))]
-    test_cleaned_reviews = [clean(test_data["review"][i]) for i in range(len(test_data["review"]))]
+    if args.load:
+        print("loading data")
+        with open('data.txt', 'rb') as f:
+            train_cleaned_reviews, test_cleaned_reviews, vocab, y = pickle.load(f)
+            print("done loading")
+    else:
+        train_data = pd.read_csv('../data/labeledTrainData.tsv', header = 0, delimiter = '\t', quoting = 3)
+        test_data = pd.read_csv('../data/unlabeledTrainData.tsv', header = 0, delimiter = '\t', quoting = 3)
+        print("done reading data")
+        train_cleaned_reviews = [clean(train_data["review"][i]) for i in range(len(train_data["review"]))]
+        test_cleaned_reviews = [clean(test_data["review"][i]) for i in range(len(test_data["review"]))]
+        print("done cleaning data")
+        y = train_data['sentiment']
+        vocab = create_vocab(train_cleaned_reviews)
+        with open('data.txt', 'wb') as f:
+            print("dumping data")
+            pickle.dump([train_cleaned_reviews, test_cleaned_reviews, vocab, y], f, -1)
 
-    y = train_data['sentiment']
-
-    vocab = create_vocab(train_cleaned_reviews)
+    print("creating feature vectors")
     X = create_feature_vectors(train_cleaned_reviews, vocab)
+    print("done creating feature vectors, running classification now")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.33)
     clf = LinearSVC(C=0.5, verbose=10)
     clf.fit(X_train, y_train)
