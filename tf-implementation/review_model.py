@@ -61,13 +61,13 @@ if __name__ == '__main__':
         vec = []
         # compute the % of words in cluster 0, 1, 2, ... 500
         print("computing embeddings and clusts")
-        embeddings_for_words =  review_to_embedding(review)
+        embeddings_for_words =  review_to_embedding(final_embeddings, word_to_idx_dict, review)
         preds = kmeans.predict(embeddings_for_words) # cluster assigments for embeddings
         assert(len(embeddings_for_words) == len(preds))
         counts = Counter(preds)
         print("creating feature vector for review")
         for i in num_clusts:
-            prop = counts[i] / len(preds) # what proportion of words were assigned to clust i?
+            prop = counts[i] / float(len(preds)) # what proportion of words were assigned to clust i?
             vec.append(prop)
         vectorized_reviews.append(vec)
     vectorized_reviews = np.array(vectorized_reviews)
