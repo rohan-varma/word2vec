@@ -14,6 +14,7 @@ from sklearn.metrics import accuracy_score
 sys.path.append('../')
 import argparse
 import pickle
+from sklearn.ensemble import RandomForestClassifier
 from utils import *
 
 def clean(review, remove_freq = True):
@@ -82,7 +83,7 @@ if __name__ == '__main__':
     if args.load:
         print("loading data")
         with open('data.txt', 'rb') as f:
-            X, train_cleaned_reviews, test_cleaned_reviews, vocab, y = pickle.load(f)
+            train_cleaned_reviews, test_cleaned_reviews, vocab, y = pickle.load(f)
             print("done loading")
     else:
         train_data = pd.read_csv('../data/labeledTrainData.tsv', header = 0, delimiter = '\t', quoting = 3)
@@ -99,11 +100,17 @@ if __name__ == '__main__':
             print("dumping data")
             pickle.dump([train_cleaned_reviews, test_cleaned_reviews, vocab, y], f, -1)
 
-    X = create_feature_vectors(train_cleaned_reviews, vocab) #EXPENSIVE, remember to pickle this as well. 
+    X = create_feature_vectors(train_cleaned_reviews, vocab) #EXPENSIVE, remember to pickle this as well.
     print("done creating feature vectors, running classification now")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.33)
-    clf = SVC(C = 10.0, kernel = 'rbf', degree = 3)
+    clf = LinearSVC(C = 1.0, verbose = 10, max_iter = 10000)
     clf.fit(X_train, y_train)
+    # TODO - find best hyperparameters
     preds = clf.predict(X_test)
     test_acc = accuracy_score(y_true=y_test, y_pred=preds)
     print("test accuracy: {}".format(test_acc))
+    rand_forest_clf = RandomForestClassifier()
+    rand_forest_clf.fit(X_train, y_train)
+    preds = rand_forest_clf.predict(X_test)
+    forest_test_acc = accuracy_score(y_true = y_test, y_Pred = preds)
+    print("test accuracy (using random forest): {}".format(forest_test_acc))

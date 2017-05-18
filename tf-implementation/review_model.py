@@ -3,7 +3,14 @@ import tensorflow as tf
 import pickle
 import sklearn
 from sklearn.cluster import KMeans
+import tensorflow as tf
 from collections import Counter
+
+def weight_variable(shape):
+    return tf.Variable(tf.truncated_normal(shape, stddev = 0.1))
+
+def bias_variable(shape):
+    return tf.Variable(tf.constant(0.1, shape = shape))
 
 def embeddings_lookup(embeddings, word_to_idx_dict, word):
     try:
@@ -19,7 +26,8 @@ def review_to_embedding(embeddings, word_to_idx_dict, review):
     embedding_matrix = [embeddings_lookup(embeddings, word_to_idx_dict, word)
                         for word in words]
     embedding_matrix = np.array(embedding_matrix)
-    assert(embedding_matrix.shape[1] == 128)
+    print(embedding_matrix.shape)
+    exit()
     return embedding_matrix
 
 
@@ -66,7 +74,7 @@ if __name__ == '__main__':
         assert(len(embeddings_for_words) == len(preds))
         counts = Counter(preds)
         print("creating feature vector for review")
-        for i in num_clusts:
+        for i in range(num_clusts):
             prop = counts[i] / float(len(preds)) # what proportion of words were assigned to clust i?
             vec.append(prop)
         vectorized_reviews.append(vec)
@@ -74,3 +82,29 @@ if __name__ == '__main__':
     print("done creating feature vectors for reviews")
     print(vectorized_reviews.shape)
     print(y.shape)
+
+
+    lr = 0.1
+    hidden_layer = 50
+    num_iters = 5000
+    x = tf.placeholder(tf.float32, shape = [None, vectorized_reviews.shape[1]])
+    y = tf.placeholder(tf.float32, shape = [None, 1]) # binary outputs
+
+    W_fc1 = weight_variable([vectorized_reviews.shape[1], hidden_layer])
+    b_fc1 = bias_variable([hidden_layer])
+    h_fc1 = tf.nn.relu(tf.matmul(x, W_fc1) + b_fc1)
+
+    W_fc2 = weight_variable([hidden_layer, 1])
+    b_fc2 = weight_variable([1])
+    y_out = tf.matmul(h_fc1, W_fc2) + b_fc2
+
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y,
+                                                            logits = y_out)
+    optimizer = tf.train.GradientDescentOptimizer(lr).minimize(cross_entropy)
+    correct_prediction = tf.equal(tf.argmax(y, axis = 1), tf.argmax(y_out, axis = 1))
+    acc = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        sess.run(init)
+        for i in range(num_iters):
+            pass
