@@ -71,7 +71,6 @@ if __name__ == '__main__':
         print("computing embeddings and clusts")
         embeddings_for_words =  review_to_embedding(final_embeddings, word_to_idx_dict, review)
         preds = kmeans.predict(embeddings_for_words) # cluster assigments for embeddings
-        assert(len(embeddings_for_words) == len(preds))
         counts = Counter(preds)
         print("creating feature vector for review")
         for i in range(num_clusts):
@@ -107,4 +106,4 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         sess.run(init)
         for i in range(num_iters):
-            pass
+            pass # TODO generate batch
