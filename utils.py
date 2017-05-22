@@ -16,7 +16,7 @@ def onehot_encode(y):
     for idx, val in enumerate(Y):
         Y[val][idx] = 1
     return Y
-    
+
 def normalize(X):
     return (X - np.mean(X, axis = 0)) / np.std(X, axis = 0)
 
@@ -161,9 +161,11 @@ def get_best_hyperparams_cv(X, y, k = 10, classifiers = [], verbose = False):
     k: number of cross-validation splits (default 10)
     classifiers: list where each element is a tupe of (classifier object to fit, list of associated params)
     """
+    if verbose: print("grid searching for best hyperparameters")
     best_train_err, best_test_err, = np.inf, np.inf
     best_params = []
     clf = None
+    assert(len(classifiers) > 0)
     for tup in classifiers:
         if verbose:
             print("training with params: {}".format(tup[1]))
@@ -174,6 +176,7 @@ def get_best_hyperparams_cv(X, y, k = 10, classifiers = [], verbose = False):
             best_train_err, best_test_err = train_err, test_err
             best_params = tup[1]
             clf = tup[0]
+    assert(clf is not None)
     return clf, best_params, best_test_err, best_train_err
 
 
@@ -224,7 +227,7 @@ def get_best_depth(X, y, k = 10, depths = [], verbose = False):
         averaged_err = np.mean(test_errors)
         depth_to_train_err[depth] = np.mean(train_errors)
         depth_to_err[depth] = averaged_err
-    if verbose: 
+    if verbose:
         print(depth_to_err)
         print(depth_to_train_err)
 
@@ -270,6 +273,3 @@ if __name__ == '__main__':
     li = [(t1, ["entropy", 10]), (t2, ["entropy", 25])]
     clf, params, test_err, train_err = get_best_hyperparams_cv(X, y, k=10, classifiers=li)
     print (params)
-
-
-

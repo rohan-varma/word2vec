@@ -81,8 +81,7 @@ if __name__ == '__main__':
     print("done creating feature vectors for reviews")
     print(vectorized_reviews.shape)
     print(y.shape)
-
-
+    print("creating model")
     lr = 0.1
     hidden_layer = 50
     num_iters = 5000
@@ -103,6 +102,7 @@ if __name__ == '__main__':
     correct_prediction = tf.equal(tf.argmax(y, axis = 1), tf.argmax(y_out, axis = 1))
     acc = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     init = tf.global_variables_initializer()
+    print("running model")
     with tf.Session() as sess:
         sess.run(init)
         for i in range(num_iters):
