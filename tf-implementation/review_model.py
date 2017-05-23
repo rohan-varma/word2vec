@@ -5,6 +5,10 @@ import sklearn
 from sklearn.cluster import KMeans
 import tensorflow as tf
 from collections import Counter
+import argparse
+# probably should not be doing this...
+import warnings
+warnings.filterwarnings("ignore")
 
 def weight_variable(shape):
     return tf.Variable(tf.truncated_normal(shape, stddev = 0.1))
@@ -26,12 +30,13 @@ def review_to_embedding(embeddings, word_to_idx_dict, review):
     embedding_matrix = [embeddings_lookup(embeddings, word_to_idx_dict, word)
                         for word in words]
     embedding_matrix = np.array(embedding_matrix)
-    print(embedding_matrix.shape)
-    exit()
+    # print(embedding_matrix.shape)
+    # exit()
     return embedding_matrix
 
 
 if __name__ == '__main__':
+    # the following code just reads in the word embeddings and a mapping from word to vector.
     try:
         print("loading embeddings")
         with open('embeddings.txt', 'rb') as f:
@@ -46,6 +51,7 @@ if __name__ == '__main__':
             print("done loading")
     except IOError:
         print("please run bwmodel.py which will load and save the data")
+
     num_clusts = 500
     #print("word 1: {}".format(reverse_dictionary[1]))
     word_to_idx_dict = {v: k for k, v in reverse_dictionary.items()}
@@ -58,21 +64,38 @@ if __name__ == '__main__':
     #     embeds.append(embedding)
     # embeds = np.array(embeds)
     # print(embeds.shape)
-    # clustering embeddings
-    print("clustering")
-    kmeans = KMeans(n_clusters = 500, max_iter = 10000).fit(final_embeddings)
-    print("done clustering")
-    kmeans.predict(final_embeddings[500])
+    # clustering embeddings - but check if written  in a file
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--load", help="load clusters from file cluster.data",
+                        action = "store_true")
+    args = parser.parse_args()
+    if args.load:
+        print("loading cluster object from file cluster.data")
+        with open('cluster.data', 'rb') as f:
+            kmeans = pickle.loads(f)
+    else:
+        print("clustering")
+        kmeans = KMeans(n_clusters = 500, max_iter = 10000).fit(final_embeddings)
+        print("done clustering, writing cluster object to data file cluster.data")
+        with open('cluster.data', 'wb') as f:
+            pickle.dumps([kmeans], f)
+    # assign embeddings to clusters
+    print("embedding 500 prediction: {}".format(kmeans.predict(final_embeddings[500])))
     # create feature vectors for reviews
     vectorized_reviews = []
     for review in train_cleaned_reviews:
         vec = []
         # compute the % of words in cluster 0, 1, 2, ... 500
         print("computing embeddings and clusts")
+        # the following code gets an embedding matrix for a review.
         embeddings_for_words =  review_to_embedding(final_embeddings, word_to_idx_dict, review)
-        preds = kmeans.predict(embeddings_for_words) # cluster assigments for embeddings
+        preds = []
+        for i in range(embeddings_for_words.shape[0]):
+            preds.append(kmeans.predict(embeddings_for_words[i]))
+
         counts = Counter(preds)
         print("creating feature vector for review")
+        # now, we create a feature vector for the review where the ith featur denotes the proportion of word embeddings assigned to that cluster
         for i in range(num_clusts):
             prop = counts[i] / float(len(preds)) # what proportion of words were assigned to clust i?
             vec.append(prop)
