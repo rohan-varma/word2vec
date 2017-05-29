@@ -94,29 +94,28 @@ if __name__ == '__main__':
         print("done cleaning data")
         y = train_data['sentiment']
         vocab = create_vocab(train_cleaned_reviews)
-        print("creating feature vctors")
-
         with open('data.txt', 'wb') as f:
             print("dumping data")
             pickle.dump([train_cleaned_reviews, test_cleaned_reviews, vocab, y], f, -1)
 
+    print("creating feature vectors")
     X = create_feature_vectors(train_cleaned_reviews, vocab) #EXPENSIVE, remember to pickle this as well.
-    print("done creating feature vectors, running classification now")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.33)
-    penalties = ['l2', 'l1']
-    loss = ['squared_hinge', 'hinge']
-    do_dual = X_train.shape[0] < X_train.shape[1] # prefer dual when n_samples > n_features
-    C_range = [0, 0.01, 0.1, 1.0, 5.0, 10, 50, 100]
-    clfs = []
-    for c in C_range:
-        for penalty in penalties:
-            for l in loss:
-                clf = LinearSVC(C = c, penalty = penalty, loss = l)
-                params = [c, penalty, l]
-                clfs.append( (clf, params))
-    clf, best_params, best_test_err, best_train_err = get_best_hyperparams_cv(X_train, y_train, clfs, verbose = True)
+    # penalties = ['l2', 'l1']
+    # loss = ['squared_hinge', 'hinge']
+    # do_dual = X_train.shape[0] < X_train.shape[1] # prefer dual when n_samples > n_features
+    # C_range = [0, 0.01, 0.1, 1.0, 5.0, 10, 50, 100]
+    # clfs = []
+    # for c in C_range:
+    #     for penalty in penalties:
+    #         for l in loss:
+    #             clf = LinearSVC(C = c, penalty = penalty, loss = l)
+    #             params = [c, penalty, l]
+    #             clfs.append((clf, params))
+    # print(len(clfs))
+    # clf, best_params, best_test_err, best_train_err = get_best_hyperparams_cv(X_train, y_train, clfs, verbose = True)
+    clf = LinearSVC(C = 1.0, loss = 'l2')
     clf.fit(X_train, y_train)
-    # TODO - find best hyperparameters
     preds = clf.predict(X_test)
     test_acc = accuracy_score(y_true=y_test, y_pred=preds)
     print("test accuracy: {}".format(test_acc))

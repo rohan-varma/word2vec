@@ -6,6 +6,7 @@ from sklearn.cluster import KMeans
 import tensorflow as tf
 from collections import Counter
 import argparse
+from sklearn.externals import joblib # for dumping models
 # probably should not be doing this...
 import warnings
 warnings.filterwarnings("ignore")
@@ -70,31 +71,32 @@ if __name__ == '__main__':
                         action = "store_true")
     args = parser.parse_args()
     if args.load:
-        print("loading cluster object from file cluster.data")
-        with open('cluster.data', 'rb') as f:
-            kmeans = pickle.loads(f)
+        print("loading cluster object from file kmeans.pkl")
+        kmeans = joblib.load('kmeans.pkl')
     else:
         print("clustering")
         kmeans = KMeans(n_clusters = 500, max_iter = 10000).fit(final_embeddings)
         print("done clustering, writing cluster object to data file cluster.data")
-        with open('cluster.data', 'wb') as f:
-            pickle.dumps([kmeans], f)
+        joblib.dump(kmeans, 'kmeans.pkl')
     # assign embeddings to clusters
     print("embedding 500 prediction: {}".format(kmeans.predict(final_embeddings[500])))
     # create feature vectors for reviews
+    m = 0
     vectorized_reviews = []
     for review in train_cleaned_reviews:
+        m+=1
         vec = []
         # compute the % of words in cluster 0, 1, 2, ... 500
-        print("computing embeddings and clusts")
+        if m % 100 == 0 : print("iteration {}, computing embeddings and clusts".format(m))
         # the following code gets an embedding matrix for a review.
         embeddings_for_words =  review_to_embedding(final_embeddings, word_to_idx_dict, review)
+        if m % 100 == 0 : print("iteration {}, (review_len * embedding len) : {}".format(m,embeddings_for_words.shape))
         preds = []
         for i in range(embeddings_for_words.shape[0]):
-            preds.append(kmeans.predict(embeddings_for_words[i]))
+            preds.append(kmeans.predict(embeddings_for_words[i])[0])
 
-        counts = Counter(preds)
-        print("creating feature vector for review")
+        counts = Counter(list(preds))
+        if m % 100 == 0 : print("iteration {}, creating feature vector for review\n".format(m))
         # now, we create a feature vector for the review where the ith featur denotes the proportion of word embeddings assigned to that cluster
         for i in range(num_clusts):
             prop = counts[i] / float(len(preds)) # what proportion of words were assigned to clust i?
@@ -105,9 +107,11 @@ if __name__ == '__main__':
     print(vectorized_reviews.shape)
     print(y.shape)
     print("creating model")
+    exit()
     lr = 0.1
     hidden_layer = 50
     num_iters = 5000
+    labels = y.as_matrix() # turn labels into np array
     x = tf.placeholder(tf.float32, shape = [None, vectorized_reviews.shape[1]])
     y = tf.placeholder(tf.float32, shape = [None, 1]) # binary outputs
 
@@ -128,5 +132,8 @@ if __name__ == '__main__':
     print("running model")
     with tf.Session() as sess:
         sess.run(init)
-        for i in range(num_iters):
+        for i in range(1):
             pass # TODO generate batch
+            sess.run(optimizer, feed_dict = {x: vectorized_reviews, y: labels})
+            xent = cross_entropy.eval(feed_dict = {x: vectorized_reviews, y: labels})
+            print("epoch: {}, loss: {}".format(i, xent))
