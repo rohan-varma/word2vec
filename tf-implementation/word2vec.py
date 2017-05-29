@@ -4,7 +4,6 @@ import numpy as np
 import sys
 from bs4 import BeautifulSoup
 sys.path.append('../')
-from utils import *
 import pandas as pd
 import re
 import collections
@@ -170,6 +169,7 @@ if __name__ == '__main__':
         vocab = build_vocab(clean_reviews, keep_dups = False)
         words, vocabulary_size = vocab, len(vocab)
         data, count, dictionary, reverse_dictionary = build_dataset(words, vocabulary_size)
+
         del words
         with open('data.pik', 'wb') as f:
             pickle.dump([clean_reviews, y, data, count, dictionary,
@@ -262,3 +262,6 @@ if __name__ == '__main__':
     with open('embeddings.txt', 'wb') as f:
         print("dumping embeddings")
         pickle.dump([final_embeddings, reverse_dictionary], f, -1)
+    with open('data.txt', 'wb') as f:
+        print("dumping reviews, vocab, and labels")
+        pickle.dump([train_cleaned_reviews, test_cleaned_reviews, vocab, y], f, -1)

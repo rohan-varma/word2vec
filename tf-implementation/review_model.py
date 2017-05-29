@@ -21,9 +21,10 @@ def embeddings_lookup(embeddings, word_to_idx_dict, word):
     try:
         idx = word_to_idx_dict[word]
     except KeyError:
-        return -1
+        print("EMBEDDING LOOKUP FAILED for word: {}".format(word))
+        return word
     ret = embeddings[idx]
-    assert(ret.shape[0] == 128)
+    assert ret.shape[0] == 128, "Houston we've got a problem"
     return ret
 
 def review_to_embedding(embeddings, word_to_idx_dict, review):
@@ -46,16 +47,18 @@ if __name__ == '__main__':
         print("please run word2vec.py which will learn and save the embeddings.")
     try:
         print("loading data")
-        with open('../bag-of-words/data.txt', 'rb') as f:
+        with open('../data.txt', 'rb') as f:
             train_cleaned_reviews, test_cleaned_reviews, vocab, y = pickle.load(f)
             print(type(y))
             print("done loading")
     except IOError:
-        print("please run bwmodel.py which will load and save the data")
+        print("please run word2vec.py which will load and save the data")
 
     num_clusts = 500
     #print("word 1: {}".format(reverse_dictionary[1]))
     word_to_idx_dict = {v: k for k, v in reverse_dictionary.items()}
+
+
     # checking word embeddings on a sample review (expensive)
     # sample_review = train_cleaned_reviews[0]
     # embeds = []
@@ -69,14 +72,30 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--load", help="load clusters from file cluster.data",
                         action = "store_true")
+    parser.add_argument("-t", "--test", help = "run sanity checks on data", action = "store_true")
     args = parser.parse_args()
+    if args.test:
+        print("Sanity checking: every word in vocab should be in the dict")
+        for v in list(vocab):
+            if v not in list(word_to_idx_dict.keys()) : print("SANITY ERROR: word {} not in dict.".format(v))
+
+        print("Sanity checking: every word in every cleaned review should be in the dict")
+        for review in train_cleaned_reviews:
+            words = review.split()
+            for word in words:
+                if word not in list(word_to_idx_dict.keys()) : print("SANITY ERROR: word {} in some review not in dict".format(word))
+        for review in test_cleaned_reviews:
+            words = review.split()
+            for word in words:
+                if word not in list(word_to_idx_dict.keys()) : print("SANITY ERROR: word {} in some test review not in dict".format(word))
+
     if args.load:
         print("loading cluster object from file kmeans.pkl")
         kmeans = joblib.load('kmeans.pkl')
     else:
         print("clustering")
         kmeans = KMeans(n_clusters = 500, max_iter = 10000).fit(final_embeddings)
-        print("done clustering, writing cluster object to data file cluster.data")
+        print("done clustering, writing cluster object to data file kmeans.pkl")
         joblib.dump(kmeans, 'kmeans.pkl')
     # assign embeddings to clusters
     print("embedding 500 prediction: {}".format(kmeans.predict(final_embeddings[500])))
@@ -90,6 +109,7 @@ if __name__ == '__main__':
         if m % 100 == 0 : print("iteration {}, computing embeddings and clusts".format(m))
         # the following code gets an embedding matrix for a review.
         embeddings_for_words =  review_to_embedding(final_embeddings, word_to_idx_dict, review)
+
         if m % 100 == 0 : print("iteration {}, (review_len * embedding len) : {}".format(m,embeddings_for_words.shape))
         preds = []
         for i in range(embeddings_for_words.shape[0]):
