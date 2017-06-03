@@ -21,7 +21,7 @@ def clean(review, remove_freq = True):
     remove_freq: True if we remove frequent words (enabled by default)
     """
     # remove html
-    text = BeautifulSoup(review).get_text()
+    text = BeautifulSoup(review, "html5lib").get_text()
     # regexp matching to extract letters only
     letters_only = re.sub("[^a-zA-Z]", " ", text)
     words = letters_only.lower().split()
@@ -29,7 +29,7 @@ def clean(review, remove_freq = True):
     meaningful_words = [w for w in words if not w in stops] if remove_freq else words
     return (" ".join(meaningful_words))
 
-def extract_and_clean_data(path_to_file):
+def extract_and_clean_data(path_to_file, get_labels = True):
     """Takes in a path to the reviews dataset and returns cleaned reviews along
     with their sentiments (binary labels)
     Params:
@@ -41,6 +41,8 @@ def extract_and_clean_data(path_to_file):
     data = pd.read_csv(path_to_file, header = 0, delimiter='\t', quoting=3)
     clean_reviews = [clean(data['review'][i])
                      for i in range(len(data['review']))]
+    if not get_labels:
+        return clean_reviews
     y = data['sentiment']
     return clean_reviews, y
 
@@ -152,9 +154,6 @@ def plot_with_labels(low_dim_embs, labels, filename='tsne.png'):
     return 1
      # plt.show()
 
-
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--load", help="load data structures from a file",
@@ -163,16 +162,19 @@ if __name__ == '__main__':
     if args.load:
         print("loading data from file data.pik")
         with open('data.pik', 'rb') as f:
-            clean_reviews, y, data, count, dictionary, reverse_dictionary, vocabulary_size = pickle.load(f)
+            test_clean_reviews, clean_reviews, y, data, count, dictionary, reverse_dictionary, vocabulary_size = pickle.load(f)
+            vocab = build_vocab(clean_reviews, keep_dups = False)
     else:
         clean_reviews, y = extract_and_clean_data('../data/labeledTrainData.tsv')
+        test_clean_reviews = extract_and_clean_data('../data/unlabeledTrainData.tsv',
+                                                    get_labels = False)
         vocab = build_vocab(clean_reviews, keep_dups = False)
         words, vocabulary_size = vocab, len(vocab)
         data, count, dictionary, reverse_dictionary = build_dataset(words, vocabulary_size)
 
-        del words
+        del words # hint to Python to reduce memory
         with open('data.pik', 'wb') as f:
-            pickle.dump([clean_reviews, y, data, count, dictionary,
+            pickle.dump([test_clean_reviews, clean_reviews, y, data, count, dictionary,
                          reverse_dictionary, vocabulary_size], f, -1)
 
     print("cleaned reviews len: {}".format(len(clean_reviews)))
@@ -264,4 +266,5 @@ if __name__ == '__main__':
         pickle.dump([final_embeddings, reverse_dictionary], f, -1)
     with open('data.txt', 'wb') as f:
         print("dumping reviews, vocab, and labels")
-        pickle.dump([train_cleaned_reviews, test_cleaned_reviews, vocab, y], f, -1)
+        train_cleaned_reviews = clean_reviews
+        pickle.dump([train_cleaned_reviews, test_clean_reviews, vocab, y], f, -1)
