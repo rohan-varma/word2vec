@@ -54,9 +54,7 @@ def gen_batch(x_train, y_train, batch_size):
     return x_batch, y_batch
 
 
-
-
-if __name__ == '__main__':
+def main():
     # the following code just reads in the word embeddings and a mapping from word to vector.
     try:
         print("loading embeddings")
@@ -204,3 +202,7 @@ if __name__ == '__main__':
                 print("Epoch: {}, accuracy: {}, loss: {}".format(i, acc, loss))
         test_acc = accuracy.eval(feed_dict = {x: vectorized_reviews_test, y_: y_test})
         print("test acc: {}".format(test_acc))
+
+
+if __name__ == '__main__':
+    main()
