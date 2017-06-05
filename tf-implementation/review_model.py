@@ -135,110 +135,52 @@ if __name__ == '__main__':
     assert(labels.all() == y.all())
     from sklearn.model_selection import train_test_split
     y = y.reshape((y.shape[0], 1))
-    vectorized_reviews_train, vectorized_reviews_test, y_train, y_test = train_test_split(vectorized_reviews, y)
+    vectorized_reviews = vectorized_reviews.astype(np.float32)
+    y = y.astype(np.float32)
     print("creating model")
-    # keras test
     import keras
-    from keras.models import Sequential
-    from keras.layers import Dense, Activation, Dropout
     from keras.utils.np_utils import to_categorical
     y = to_categorical(y)
     vectorized_reviews_train, vectorized_reviews_test, y_train, y_test = train_test_split(vectorized_reviews, y)
-    model = Sequential()
-    model.add(Dense(units=300, input_dim=500))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(units = 64))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(units = 2))
-    model.add(Activation('softmax'))
-    model.compile(loss='categorical_crossentropy',
-              optimizer='sgd',
-              metrics=['accuracy'])
-    model.fit(vectorized_reviews_train, y_train, epochs=5000, batch_size=128)
-    print()
-    loss_and_metrics = model.evaluate(vectorized_reviews_test, y_test, batch_size=128)
-    print(loss_and_metrics)
-    exit()
-    x = tf.placeholder(tf.float32, shape=[None, 500])
-    y_ = tf.placeholder(tf.float32, shape=[None, 1])
+    print(vectorized_reviews.shape)
+    print(y.shape)
+    print(y_train.shape)
+    print(y_test.shape)
+    def weight(shape):
+        return tf.Variable(tf.truncated_normal(shape, stddev = 0.1))
 
-    def weight_variable(shape):
-        """Initializes weights randomly from a normal distribution
-        Params: shape: list of dimensionality of tensor
-        """
-        initial = tf.truncated_normal(shape, stddev=0.1)
-        return tf.Variable(initial)
+    def bias(shape):
+        return tf.Variable(tf.constant(0.1, shape = shape))
 
-    def bias_variable(shape):
-        """Initializes the bias term randomly from a normal distribution.
-        Params: shape: list of dimensionality for the bias term.
-        """
-        initial = tf.constant(0.1, shape=shape)
-        return tf.Variable(initial)
+    lr = 0.1
+    neurons = 50
+    num_iters = 5000
 
-    def fc_layer(scope, x, weight_shape, activation = 'relu', keep_prob = 1.0):
-        with tf.variable_scope(scope):
-            W_fc = weight_variable(weight_shape)
-            b_shape = [weight_shape[-1]]
-            b_fc = bias_variable(b_shape)
-            h_fc = tf.nn.relu(tf.matmul(x, W_fc) + b_fc)
-            h_fc_drop = tf.nn.dropout(h_fc, keep_prob=keep_prob)
-            return h_fc_drop
+    x = tf.placeholder(tf.float32, shape = [None, vectorized_reviews.shape[1]])
+    y_ = tf.placeholder(tf.float32, shape = [None, 2])
+    W_1, b_1 = weight([vectorized_reviews.shape[1], neurons]), bias([neurons])
+    h_1 = tf.nn.relu(tf.matmul(x, W_1) + b_1)
 
-    # create weights and biases and function for our first layer
-    W_fc1, b_fc1 = weight_variable([500, 100]), bias_variable([100])
-    # hidden layer computes relu(Wx + b)
-    #h_fc1 = tf.nn.relu(tf.matmul(x, W_fc1) + b_fc1)
+    W_2, b_2 = weight([neurons, 30]), bias([30])
+    h_2 = tf.nn.relu(tf.matmul(h_1, W_2) + b_2)
+    W_3, b_3 = weight([30, 2]), bias([2])
+    y = tf.matmul(h_2, W_3) + b_3
 
-    keep_prob_1 = tf.placeholder(tf.float32)
-    # add dropout: discard activations with probability given by keep_prob
-    #h_fc1_dropout = tf.nn.dropout(h_fc1, keep_prob_1)
+    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels = y_, logits = y))
+    opt_step = tf.train.GradientDescentOptimizer(lr).minimize(cross_entropy_loss)
 
-    h_fc1_dropout = fc_layer("layer-1", x, [vectorized_reviews.shape[1], 100], activation = 'relu',
-                             keep_prob = keep_prob_1)
+    correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    # create w, b, and function for our next layer
-    W_fc2, b_fc2 = weight_variable([100, 30]), bias_variable([30])
-    #h_fc2 = tf.nn.relu(tf.matmul(h_fc1_dropout, W_fc2) + b_fc2)
-
-    # # add dropout
-    keep_prob_2 = tf.placeholder(tf.float32)
-
-    # # discard second hidden layer activations with keep_prob_2 probability
-    #h_fc2_dropout = tf.nn.dropout(h_fc2, keep_prob_2)
-    h_fc2_dropout = fc_layer("layer-2", h_fc1_dropout, [100, 30], activation = 'relu',
-                             keep_prob = keep_prob_2)
-    # define w and b for the softmax layer
-    W_fc3, b_fc3 = weight_variable([30, 1]), bias_variable([1])
-
-    # softmax Output
-    y_pred = tf.nn.softmax(tf.matmul(h_fc2_dropout, W_fc3) + b_fc3)
-    cross_entropy = -tf.reduce_sum(y_*tf.log(y_pred))
-    sae = -tf.reduce_sum(y_-y_pred)
-    #train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
-    #sae_train_step = tf.train.AdamOptimizer(1e-4).minimize(sae)
-    train_step = tf.train.MomentumOptimizer(1e-4, 0.5, name='Momentum', use_nesterov=True).minimize(cross_entropy)
-    # accuracy variables
-    cp = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_, 1))
-    acc = tf.reduce_mean(tf.cast(cp, tf.float32))
     init = tf.global_variables_initializer()
-
-
     with tf.Session() as sess:
         sess.run(init)
-        for i in range(10000):
-            # iterate for 10k epochs and run batch SGD.
-            sess.run(train_step, feed_dict={x: vectorized_reviews_train, y_: y_train, keep_prob_1: 0.8,
-                                            keep_prob_2: 0.5})
+        for i in range(num_iters):
+            opt_step.run(feed_dict = {x: vectorized_reviews_train, y_: y_train})
             if i % 100 == 0:
-                print("epoch: {}".format(i + 1))
-                print(acc.eval(feed_dict={x: vectorized_reviews_test, y_: y_test, keep_prob_1: 1.0,
-                                          keep_prob_2: 1.0}))
-        print("done training!")
-        test_acc = acc.eval(feed_dict={x: vectorized_reviews_test, y_: y_test, keep_prob_1: 1.0,
-                                       keep_prob_2: 1.0})
+                acc = accuracy.eval(feed_dict = {x: vectorized_reviews_train,
+                                                 y_: y_train})
+                loss = cross_entropy_loss.eval(feed_dict = {x: vectorized_reviews_train, y_: y_train})
+                print("Epoch: {}, accuracy: {}, loss: {}".format(i, acc, loss))
+        test_acc = accuracy.eval(feed_dict = {x: vectorized_reviews_test, y_: y_test})
         print("test acc: {}".format(test_acc))
-
-    sess.close()
