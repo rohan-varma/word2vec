@@ -36,6 +36,25 @@ def review_to_embedding(embeddings, word_to_idx_dict, review):
     # exit()
     return embedding_matrix
 
+def gen_batch(x_train, y_train, batch_size):
+    assert x_train.shape[0] == y_train.shape[0] # should have same dim
+    assert batch_size <= x_train.shape[0] # batches can't be bigger than data
+    merged = np.zeros((x_train.shape[0], x_train.shape[1] + y_train.shape[1]))
+    merged[:, :-y_train.shape[1]] = x_train
+    merged[:, -y_train.shape[1]:] = y_train
+    np.random.shuffle(merged)
+    x_train = merged[:, :-y_train.shape[1]]
+    y_train = merged[:, -y_train.shape[1]:]
+    batch = merged[np.random.choice(merged.shape[0], batch_size, replace=False), :]
+    x_batch = batch[:, :-y_train.shape[1]]
+    y_batch = batch[:, -y_train.shape[1]:]
+    assert x_batch.shape[0] == y_batch.shape[0] == batch_size
+    assert x_batch.shape[1] == x_train.shape[1]
+    assert y_batch.shape[1] == y_train.shape[1]
+    return x_batch, y_batch
+
+
+
 
 if __name__ == '__main__':
     # the following code just reads in the word embeddings and a mapping from word to vector.
@@ -167,7 +186,7 @@ if __name__ == '__main__':
     y = tf.matmul(h_2, W_3) + b_3
 
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels = y_, logits = y))
-    opt_step = tf.train.GradientDescentOptimizer(lr).minimize(cross_entropy_loss)
+    opt_step = tf.train.MomentumOptimizer(lr, momentum = 0.5, use_nesterov=True).minimize(cross_entropy_loss)
 
     correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -175,10 +194,10 @@ if __name__ == '__main__':
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init)
-        for i in range(num_iters):
-            # TODO BATCHING
-            opt_step.run(feed_dict = {x: vectorized_reviews_train, y_: y_train})
-            if i % 100 == 0:
+        for i in range(10000):
+            x_batch, y_batch = gen_batch(vectorized_reviews_train, y_train, 128)
+            opt_step.run(feed_dict = {x: x_batch, y_: y_batch})
+            if i % 500 == 0:
                 acc = accuracy.eval(feed_dict = {x: vectorized_reviews_train,
                                                  y_: y_train})
                 loss = cross_entropy_loss.eval(feed_dict = {x: vectorized_reviews_train, y_: y_train})
