@@ -176,6 +176,7 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         sess.run(init)
         for i in range(num_iters):
+            # TODO BATCHING
             opt_step.run(feed_dict = {x: vectorized_reviews_train, y_: y_train})
             if i % 100 == 0:
                 acc = accuracy.eval(feed_dict = {x: vectorized_reviews_train,
