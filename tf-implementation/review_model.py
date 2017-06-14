@@ -18,6 +18,8 @@ def bias_variable(shape):
     return tf.Variable(tf.constant(0.1, shape = shape))
 
 def embeddings_lookup(embeddings, word_to_idx_dict, word):
+    """Takes a word, looks it up in an index dictionary, and returns the word's
+    embedding."""
     try:
         idx = word_to_idx_dict[word]
     except KeyError:
@@ -28,15 +30,15 @@ def embeddings_lookup(embeddings, word_to_idx_dict, word):
     return ret
 
 def review_to_embedding(embeddings, word_to_idx_dict, review):
+    """Converts a review to it's (word-level) embedding"""
     words = review.split()
     embedding_matrix = [embeddings_lookup(embeddings, word_to_idx_dict, word)
                         for word in words]
     embedding_matrix = np.array(embedding_matrix)
-    # print(embedding_matrix.shape)
-    # exit()
     return embedding_matrix
 
 def gen_batch(x_train, y_train, batch_size):
+    """Generates a random batch of data for learning."""
     assert x_train.shape[0] == y_train.shape[0] # should have same dim
     assert batch_size <= x_train.shape[0] # batches can't be bigger than data
     merged = np.zeros((x_train.shape[0], x_train.shape[1] + y_train.shape[1]))
@@ -58,39 +60,30 @@ def main():
     # the following code just reads in the word embeddings and a mapping from word to vector.
     try:
         print("loading embeddings")
-        with open('embeddings.txt', 'rb') as f:
+        with open('data/embeddings.txt', 'rb') as f:
             final_embeddings, reverse_dictionary = pickle.load(f)
     except IOError:
         print("please run word2vec.py which will learn and save the embeddings.")
     try:
         print("loading data")
-        with open('./data.txt', 'rb') as f:
+        with open('data/data.txt', 'rb') as f:
             train_cleaned_reviews, test_cleaned_reviews, vocab, y = pickle.load(f)
             print(type(y))
             print("done loading")
     except IOError:
         print("please run word2vec.py which will load and save the data")
 
+    # variables needed later
     num_clusts = 500
-    #print("word 1: {}".format(reverse_dictionary[1]))
     word_to_idx_dict = {v: k for k, v in reverse_dictionary.items()}
 
-
-    # checking word embeddings on a sample review (expensive)
-    # sample_review = train_cleaned_reviews[0]
-    # embeds = []
-    # for word in sample_review.split():
-    #     print("word in use: {}".format(word))
-    #     embedding = embeddings_lookup(final_embeddings, word_to_idx_dict, word)
-    #     embeds.append(embedding)
-    # embeds = np.array(embeds)
-    # print(embeds.shape)
-    # clustering embeddings - but check if written  in a file
+    # arguments to the script that load already processed data and run checks on them.
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--load", help="load clusters from file cluster.data",
                         action = "store_true")
     parser.add_argument("-t", "--test", help = "run sanity checks on data", action = "store_true")
     args = parser.parse_args()
+
     if args.test:
         print("Sanity checking: every word in vocab should be in the dict")
         for v in list(vocab):
@@ -108,15 +101,15 @@ def main():
 
     if args.load:
         print("loading cluster object from file kmeans.pkl")
-        kmeans = joblib.load('kmeans.pkl')
-        li = joblib.load('reviews_and_labels.txt')
+        kmeans = joblib.load('data/kmeans.pkl')
+        li = joblib.load('data/reviews_and_labels.txt')
         assert(len(li) == 2)
         vectorized_reviews, y = li[0], li[1]
     else:
         print("clustering")
         kmeans = KMeans(n_clusters = 500, max_iter = 10000).fit(final_embeddings)
         print("done clustering, writing cluster object to data file kmeans.pkl")
-        joblib.dump(kmeans, 'kmeans.pkl')
+        joblib.dump(kmeans, 'data/kmeans.pkl')
     # assign embeddings to clusters
         print("embedding 500 prediction: {}".format(kmeans.predict(final_embeddings[500])))
         # create feature vectors for reviews
@@ -144,10 +137,9 @@ def main():
             vectorized_reviews.append(vec)
         vectorized_reviews = np.array(vectorized_reviews)
     print("done creating feature vectors for reviews")
-    print(vectorized_reviews.shape)
-    print(y.shape)
-    joblib.dump([vectorized_reviews, y], "reviews_and_labels.txt")
+    joblib.dump([vectorized_reviews, y], "data/reviews_and_labels.txt")
     print("creating model")
+    # convert if necessary
     labels = y.as_matrix() if not isinstance(y, np.ndarray) else y
     assert(labels.all() == y.all())
     from sklearn.model_selection import train_test_split
@@ -155,7 +147,6 @@ def main():
     vectorized_reviews = vectorized_reviews.astype(np.float32)
     y = y.astype(np.float32)
     print("creating model")
-    import keras
     from keras.utils.np_utils import to_categorical
     y = to_categorical(y)
     vectorized_reviews_train, vectorized_reviews_test, y_train, y_test = train_test_split(vectorized_reviews, y)
@@ -171,7 +162,6 @@ def main():
 
     lr = 0.1
     neurons = 50
-    num_iters = 5000
 
     x = tf.placeholder(tf.float32, shape = [None, vectorized_reviews.shape[1]])
     y_ = tf.placeholder(tf.float32, shape = [None, 2])
@@ -184,7 +174,8 @@ def main():
     y = tf.matmul(h_2, W_3) + b_3
 
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels = y_, logits = y))
-    opt_step = tf.train.MomentumOptimizer(lr, momentum = 0.5, use_nesterov=True).minimize(cross_entropy_loss)
+    opt_step = tf.train.MomentumOptimizer(lr, momentum = 0.5,
+                                          use_nesterov=True).minimize(cross_entropy_loss)
 
     correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))

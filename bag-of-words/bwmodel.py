@@ -1,13 +1,10 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import nltk
 from nltk.corpus import stopwords
 from bs4 import BeautifulSoup
 import re
 from collections import defaultdict
 from sklearn.svm import LinearSVC
-from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 import sys
 from sklearn.metrics import accuracy_score
@@ -15,7 +12,6 @@ sys.path.append('../')
 import argparse
 import pickle
 from sklearn.ensemble import RandomForestClassifier
-from utils import *
 
 def clean(review, remove_freq = True):
     """Given a review, cleans it by removing html tags and punctation.
@@ -101,19 +97,6 @@ if __name__ == '__main__':
     print("creating feature vectors")
     X = create_feature_vectors(train_cleaned_reviews, vocab) #EXPENSIVE, remember to pickle this as well.
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.33)
-    # penalties = ['l2', 'l1']
-    # loss = ['squared_hinge', 'hinge']
-    # do_dual = X_train.shape[0] < X_train.shape[1] # prefer dual when n_samples > n_features
-    # C_range = [0, 0.01, 0.1, 1.0, 5.0, 10, 50, 100]
-    # clfs = []
-    # for c in C_range:
-    #     for penalty in penalties:
-    #         for l in loss:
-    #             clf = LinearSVC(C = c, penalty = penalty, loss = l)
-    #             params = [c, penalty, l]
-    #             clfs.append((clf, params))
-    # print(len(clfs))
-    # clf, best_params, best_test_err, best_train_err = get_best_hyperparams_cv(X_train, y_train, clfs, verbose = True)
     clf = LinearSVC(C = 1.0, loss = 'l2')
     clf.fit(X_train, y_train)
     preds = clf.predict(X_test)

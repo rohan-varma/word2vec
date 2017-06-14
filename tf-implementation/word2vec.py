@@ -161,7 +161,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.load:
         print("loading data from file data.pik")
-        with open('data.pik', 'rb') as f:
+        with open('data/data.pik', 'rb') as f:
             test_clean_reviews, clean_reviews, y, data, count, dictionary, reverse_dictionary, vocabulary_size = pickle.load(f)
             vocab = build_vocab(clean_reviews, keep_dups = False)
     else:
@@ -173,7 +173,7 @@ if __name__ == '__main__':
         data, count, dictionary, reverse_dictionary = build_dataset(words, vocabulary_size)
 
         del words # hint to Python to reduce memory
-        with open('data.pik', 'wb') as f:
+        with open('data/data.pik', 'wb') as f:
             pickle.dump([test_clean_reviews, clean_reviews, y, data, count, dictionary,
                          reverse_dictionary, vocabulary_size], f, -1)
 
@@ -211,6 +211,7 @@ if __name__ == '__main__':
     # Compute the average NCE loss for the batch.
     # tf.nce_loss automatically draws a new sample of the negative labels each
     # time we evaluate the loss.
+    losses = ['nce', 'sampled', ]
     loss_fun = tf.reduce_mean(
         tf.nn.nce_loss(weights=nce_weights,
                        biases=nce_biases,
@@ -251,7 +252,6 @@ if __name__ == '__main__':
         final_embeddings = normalized_embeddings.eval()
     try:
          from sklearn.manifold import TSNE
-         import matplotlib.pyplot as plt
          tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=5000)
          plot_only = 500
          low_dim_embs = tsne.fit_transform(final_embeddings[:plot_only, :])
@@ -261,10 +261,10 @@ if __name__ == '__main__':
         print("please install sklearn, matplotlib, and scipy for tsne embeddings")
     print(final_embeddings.shape)
     print(len(reverse_dictionary.values()))
-    with open('embeddings.txt', 'wb') as f:
+    with open('data/embeddings.txt', 'wb') as f:
         print("dumping embeddings")
         pickle.dump([final_embeddings, reverse_dictionary], f, -1)
-    with open('data.txt', 'wb') as f:
+    with open('data/data.txt', 'wb') as f:
         print("dumping reviews, vocab, and labels")
         train_cleaned_reviews = clean_reviews
         pickle.dump([train_cleaned_reviews, test_clean_reviews, vocab, y], f, -1)
