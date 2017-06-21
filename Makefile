@@ -1,4 +1,4 @@
-.PHONY: default bag-of-words word-vectors
+.PHONY: default bag-of-words word-vectors cluster-model rnn-model
 .SILENT:
 default: bag-of-words word-vectors cluster-model rnn-model
 
