@@ -181,6 +181,7 @@ def main():
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
     init = tf.global_variables_initializer()
+    acc_file = open('cluster-acc.txt', 'w')
     with tf.Session() as sess:
         sess.run(init)
         for i in range(10000):
@@ -191,8 +192,12 @@ def main():
                                                  y_: y_train})
                 loss = cross_entropy_loss.eval(feed_dict = {x: vectorized_reviews_train, y_: y_train})
                 print("Epoch: {}, accuracy: {}, loss: {}".format(i, acc, loss))
+                acc_file.write("Epoch: {}, accuracy: {}, loss: {}".format(i, acc, loss))
         test_acc = accuracy.eval(feed_dict = {x: vectorized_reviews_test, y_: y_test})
         print("test acc: {}".format(test_acc))
+        acc_file.write("test acc: {}".format(test_acc))
+        acc_file.close()
+
 
 
 if __name__ == '__main__':

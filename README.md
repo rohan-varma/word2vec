@@ -11,7 +11,7 @@ Investigates several models, including a bag of words model, a neural network th
 	
 `make` targets: 
 	
-- `bag-of-words`: runs the bag of words model and writes an accuracy report to file `bag-of-words-acc.txt`
+- `bag-of-words`: runs the bag of words model and writes an accuracy report to file `bag-of-words/bag-of-words-acc.txt`
 		
 - `word-vectors`: runs a Tensorflow model to learn word vectors from the review data, and outputs a picture of a TSNE word vector visualization to file `tf-implementation/TSNE.png`
 		
