@@ -79,7 +79,7 @@ def main():
 
     # arguments to the script that load already processed data and run checks on them.
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--load", help="load clusters from file cluster.data",
+    parser.add_argument("-l", "--load", help="load clusters from file data/kmeans.pkl",
                         action = "store_true")
     parser.add_argument("-t", "--test", help = "run sanity checks on data", action = "store_true")
     args = parser.parse_args()

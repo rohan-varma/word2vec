@@ -160,7 +160,7 @@ if __name__ == '__main__':
                         action = "store_true")
     args = parser.parse_args()
     if args.load:
-        print("loading data from file data.pik")
+        print("loading data from file data/data.pik")
         with open('data/data.pik', 'rb') as f:
             test_clean_reviews, clean_reviews, y, data, count, dictionary, reverse_dictionary, vocabulary_size = pickle.load(f)
             vocab = build_vocab(clean_reviews, keep_dups = False)
@@ -235,7 +235,6 @@ if __name__ == '__main__':
     skip_window = 1       # How many words to consider left and right.
     num_skips = 2         # How many times to reuse an input to generate a label.
     nsteps = 500000
-    # exit()
     with tf.Session() as sess:
         sess.run(init)
         avg_loss = 0.
