@@ -1,0 +1,1 @@
+test accuracy for Linear SVM: 0.855030303030303test accuracy, using random forest: 0.7636363636363637
