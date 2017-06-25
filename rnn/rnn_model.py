@@ -15,12 +15,21 @@ def generate_review_features(review, word_to_idx_dict, embeddings):
         x.append(embedding)
     return np.array(x)
 
-def generate_batch(features_train_clean_review, batch_size = 64):
-    batch = []
-    for i in range(batch_size):
-        idx = np.random.randint(0, features_train_clean_review.shape[0])
-        batch.append(features_train_clean_review[idx])
-    return np.array(batch)
+def generate_batch(features_train_clean_review, y, batch_size = 64):
+    """Generates a random batch of batch_size from the dataset
+    Params:
+    features_train_clean_review: the word vector features for the reviews
+    y: the labels
+    batch_size: the size of batch to generate (must be <= the dataset size)
+    """
+    x_batch, y_batch = [], []
+    for _ in range(batch_size):
+        randint = np.random.randint(0, features_train_clean_review.shape[0])
+        features, label = features_train_clean_review[randint], y[randint]
+        x_batch.append(features)
+        y_batch.append(label)
+    x_batch, y_batch = np.array(x_batch), np.array(y_batch)
+    return x_batch, y_batch
 
 
 
@@ -46,10 +55,10 @@ if __name__ == '__main__':
     # generate the features (ie, array of word vectors) for each review.
     features_train_clean_review = [generate_review_features(rev, word_to_idx_dict, final_embeddings) for rev in train_cleaned_reviews]
     features_train_clean_review = np.array(features_train_clean_review)
-    print(features_train_clean_review[0].shape)
-    batch = generate_batch(features_train_clean_review, batch_size = 10)
-    print(batch.shape[0])
-    print(batch[0].shape)
+    print("generating a sample batch")
+    x_batch, y_batch = generate_batch(features_train_clean_review, y, batch_size = 10)
+    print("done generating batch")
+    exit()
     # variables for the rnn
     RNNconfig = {
     'num_steps' : 5, # higher n = capture longer term dependencies, but more expensive (and potential vanishing gradient issues)
