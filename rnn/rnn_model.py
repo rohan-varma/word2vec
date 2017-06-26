@@ -55,7 +55,8 @@ if __name__ == '__main__':
     # generate the features (ie, array of word vectors) for each review.
     features_train_clean_review = [generate_review_features(rev, word_to_idx_dict, final_embeddings) for rev in train_cleaned_reviews]
     features_train_clean_review = np.array(features_train_clean_review)
-    y = y.reshape((y.shape[0], 1))
+    y = y.values.reshape((y.shape[0], 1))
+
     print("generating a sample batch")
     x_batch, y_batch = generate_batch(features_train_clean_review, y, batch_size = 10)
     print("{} {}".format(x_batch.shape, x_batch[0].shape))
