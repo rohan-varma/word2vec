@@ -39,4 +39,6 @@ cluster-model:
 	cd ..;
 
 rnn-model:
-	echo "rnn-model: TODO"
+	cd rnn; \
+	python3 rnn_model.py; \
+	cd ..;
