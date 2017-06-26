@@ -55,14 +55,16 @@ if __name__ == '__main__':
     # generate the features (ie, array of word vectors) for each review.
     features_train_clean_review = [generate_review_features(rev, word_to_idx_dict, final_embeddings) for rev in train_cleaned_reviews]
     features_train_clean_review = np.array(features_train_clean_review)
-    y = y.values.reshape((y.shape[0], 1))
+    y_labels = y.values.reshape((y.shape[0], 1))
+    # TODO eliminate variable discrepancy... the placeholder is also named y
 
-    print("generating a sample batch")
-    x_batch, y_batch = generate_batch(features_train_clean_review, y, batch_size = 10)
-    print("{} {}".format(x_batch.shape, x_batch[0].shape))
-    print("{} {}".format(y_batch.shape, y_batch[0].shape))
-    print("done generating batch")
-    exit()
+    # print("generating a sample batch")
+    # x_batch, y_batch = generate_batch(features_train_clean_review, y_labels, batch_size = 10)
+    # print("{} {}".format(x_batch.shape, x_batch[0].shape))
+    # print("{} {}".format(y_batch.shape, y_batch[0].shape))
+    # print("done generating batch")
+
+
     # variables for the rnn
     RNNconfig = {
     'num_steps' : 5, # higher n = capture longer term dependencies, but more expensive (and potential vanishing gradient issues)
@@ -108,10 +110,18 @@ if __name__ == '__main__':
     total_loss = tf.reduce_mean(losses)
     train_step = tf.train.AdagradOptimizer(0.1).minimize(total_loss)
 
-    def train_network(num_epochs, verbose=True):
+    def train_network(num_epochs, X_train, y_train, verbose=True):
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             training_losses = []
+            training_loss = 0
+            training_state = np.zeros((RNNconfig['batch_size'], RNNconfig['num_steps']))
+
+            for i in range(num_epochs):
+                X_batch, y_batch = generate_batch(X_train, y_train, batch_size = RNNconfig['batch_size'])
+                
+
+
             # batch = gen_batch(features_train_clean_review)
             # for idx, epoch in enumerate(gen_epochs(num_epochs, RNNconfig['num_steps'])):
             #     training_loss = 0
@@ -134,3 +144,6 @@ if __name__ == '__main__':
             #             training_loss = 0
 
         return training_losses
+    print("training network...")
+    tl = train_network(5, features_train_clean_review, y_labels)
+    print(tl)
