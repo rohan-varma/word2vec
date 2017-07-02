@@ -119,7 +119,10 @@ if __name__ == '__main__':
 
             for i in range(num_epochs):
                 X_batch, y_batch = generate_batch(X_train, y_train, batch_size = RNNconfig['batch_size'])
-                
+
+                print(X_batch.shape)
+                print(y_batch.shape)
+
 
 
             # batch = gen_batch(features_train_clean_review)
